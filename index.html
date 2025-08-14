@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="main.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+    <!-- ... (rest of the HTML remains the same) ... -->
+
+    <script>
+        // ... (previous JavaScript code remains the same) ...
+
+        function newGame() {
+            $.get('/api/wordle', function (data) {
+                secretWord = data.word;
+                // ... (rest of the function remains the same) ...
+            });
+        }
+
+        function submitGuess() {
+            let guess = $('#guess-input').val().toUpperCase();
+            if (guess.length !== 5) return;
+
+            $.ajax({
+                url: '/api/wordle',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ word: guess, path: '/check_word' }),
+                success: function(data) {
+                    if (data.valid) {
+                        checkGuess(guess);
+                    } else {
+                        alert('Not a valid word');
+                    }
+                }
+            });
+        }
+
+        function checkGuess(guess) {
+            $.ajax({
+                url: '/api/wordle',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ guess: guess, word: secretWord, path: '/check_guess' }),
+                success: function (data) {
+                    // ... (rest of the function remains the same) ...
+                },
+                error: function(jqXHR) {
+                    if (jqXHR.status === 400) {
+                        alert(JSON.parse(jqXHR.responseText).error);
+                    }
+                }
+            });
+        }
+
+        // ... (rest of the JavaScript code remains the same) ...
+    </script>
+</body>
+</html>

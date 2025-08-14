@@ -26,3 +26,8 @@ env/
 # The word list file (if you don't want to include it in your repository)
 # Uncomment the next line if you want to exclude it
 # words_alpha.txt
+
+# Node Modules 
+node_modules/
+
+

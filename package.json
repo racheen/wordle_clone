@@ -1,0 +1,17 @@
+{
+  "name": "wordle",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tailwindcss -i ./src/main.css -o ./main.css"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.3"
+  }
+}
