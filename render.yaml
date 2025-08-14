@@ -2,8 +2,10 @@ services:
   - type: web
     name: wordle-app
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: npm install && npm run build && pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0
+        value: 3.9.16 # Changed from 3.9.0 to a more specific, stable version
+      - key: NODE_VERSION
+        value: 14.17.0
