@@ -1,168 +1,162 @@
 <!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wordle</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
-</head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
-    <h1 class="text-4xl font-bold mb-8 text-gray-800">Wordle</h1>
+    <link
+      href="{{ url_for('static', filename='css/main.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    class="bg-gray-100 flex flex-col items-center justify-center min-h-screen"
+  >
+    <h1 class="text-4xl font-bold mb-8 text-gray-800 bg-yellow-200">Wordle</h1>
+
     <div id="game-board" class="grid grid-rows-6 gap-2 mb-8"></div>
-    <div id="game-message" class="text-xl font-bold mb-4 text-center"></div>
     <div class="flex space-x-2">
-        <input type="text" id="guess-input" maxlength="5" class="text-xl p-2 border-2 border-gray-300 rounded uppercase" />
-        <button id="submit-guess" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">Submit</button>
+      <input
+        type="text"
+        id="guess-input"
+        maxlength="5"
+        class="text-xl p-2 border-2 border-gray-300 rounded uppercase"
+      />
+      <button
+        id="submit-guess"
+        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+      >
+        Submit
+      </button>
     </div>
-    <div id="keyboard" class="mt-8"></div>
-    <button id="restart-game" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition hidden">Restart Game</button>
+    <div id="keyboard" class="mt-8">
+      <p>Keyboard should appear here</p>
+    </div>
 
     <script>
-        let secretWord;
-        let guesses = [];
-        const MAX_GUESSES = 6;
-        const keyboard = [
-            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-            ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-            ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
-        ];
+      let secretWord;
+      let guesses = [];
+      const keyboard = [
+        ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+        ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+        ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
+      ];
 
-        function newGame() {
-            $.get('/new_game', function (data) {
-                secretWord = data.word;
-                guesses = [];
-                updateBoard();
-                updateKeyboard();
-                $('#game-message').text('');
-                $('#guess-input').val('').prop('disabled', false);
-                $('#submit-guess').prop('disabled', false);
-                $('#restart-game').addClass('hidden');
-            });
-        }
+      if (typeof jQuery == 'undefined') {
+        console.error('jQuery is not loaded');
+      } else {
+        console.log('jQuery is loaded');
+      }
 
-        function submitGuess() {
-            let guess = $('#guess-input').val().toUpperCase();
-            if (guess.length !== 5) return;
-
-            $.ajax({
-                url: '/check_word',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ word: guess }),
-                success: function(data) {
-                    if (data.valid) {
-                        checkGuess(guess);
-                    } else {
-                        alert('Not a valid word');
-                    }
-                }
-            });
-        }
-
-        function checkGuess(guess) {
-            $.ajax({
-                url: '/check_guess',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ guess: guess, word: secretWord }),
-                success: function (data) {
-                    guesses.push({ word: guess, result: data.result });
-                    updateBoard();
-                    updateKeyboard();
-                    $('#guess-input').val('');
-
-                    if (guess === secretWord) {
-                        endGame(true);
-                    } else if (guesses.length >= MAX_GUESSES) {
-                        endGame(false);
-                    }
-                },
-                error: function(jqXHR) {
-                    if (jqXHR.status === 400) {
-                        alert(JSON.parse(jqXHR.responseText).error);
-                    }
-                }
-            });
-        }
-
-        function endGame(isWin) {
-            $('#guess-input').prop('disabled', true);
-            $('#submit-guess').prop('disabled', true);
-            $('#restart-game').removeClass('hidden');
-
-            if (isWin) {
-                $('#game-message').text('Congratulations! You guessed the word!').removeClass('text-red-500').addClass('text-green-500');
-            } else {
-                $('#game-message').text(`Game over! The word was ${secretWord}.`).removeClass('text-green-500').addClass('text-red-500');
-            }
-        }
-
-        function updateBoard() {
-            let html = '';
-            for (let i = 0; i < MAX_GUESSES; i++) {
-                html += '<div class="grid grid-cols-5 gap-2">';
-                if (i < guesses.length) {
-                    let guess = guesses[i];
-                    for (let j = 0; j < 5; j++) {
-                        let bgColor = guess.result[j] === 'green' ? 'bg-green-500' : 
-                                      guess.result[j] === 'yellow' ? 'bg-yellow-500' : 'bg-gray-500';
-                        html += `<div class="w-14 h-14 ${bgColor} flex items-center justify-center text-white text-2xl font-bold rounded">${guess.word[j]}</div>`;
-                    }
-                } else {
-                    for (let j = 0; j < 5; j++) {
-                        html += '<div class="w-14 h-14 border-2 border-gray-300 rounded"></div>';
-                    }
-                }
-                html += '</div>';
-            }
-            $('#game-board').html(html);
-        }
-
-        function updateKeyboard() {
-            let html = '';
-            keyboard.forEach(row => {
-                html += '<div class="flex space-x-1 justify-center my-1">';
-                row.forEach(key => {
-                    let bgColor = 'bg-gray-300';
-                    guesses.forEach(guess => {
-                        if (guess.word.includes(key)) {
-                            let index = guess.word.indexOf(key);
-                            if (guess.result[index] === 'green') {
-                                bgColor = 'bg-green-500 text-white';
-                            } else if (guess.result[index] === 'yellow' && bgColor !== 'bg-green-500 text-white') {
-                                bgColor = 'bg-yellow-500 text-white';
-                            } else if (bgColor === 'bg-gray-300') {
-                                bgColor = 'bg-gray-500 text-white';
-                            }
-                        }
-                    });
-                    html += `<button class="w-10 h-12 ${bgColor} rounded font-bold key-button" data-key="${key}">${key}</button>`;
-                });
-                html += '</div>';
-            });
-            $('#keyboard').html(html);
-
-            // Add click event for keyboard buttons
-            $('.key-button').click(function() {
-                let currentInput = $('#guess-input').val();
-                if (currentInput.length < 5) {
-                    $('#guess-input').val(currentInput + $(this).data('key'));
-                }
-            });
-        }
-
-        $(document).ready(function () {
-            newGame();
-            $('#submit-guess').click(submitGuess);
-            $('#guess-input').on('keyup', function (e) {
-                if (e.key === 'Enter') {
-                    submitGuess();
-                }
-            });
-            $('#restart-game').click(newGame);
+      function newGame() {
+        console.log('Starting new game');
+        $.get('/api/new_game', function (data) {
+          console.log('Received new game data:', data);
+          secretWord = data.word;
+          guesses = [];
+          updateBoard();
+          updateKeyboard();
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+          console.error('Error starting new game:', textStatus, errorThrown);
         });
+      }
+
+      function submitGuess() {
+        let guess = $('#guess-input').val().toUpperCase();
+        if (guess.length !== 5) return;
+        console.log('Submitting guess:', guess);
+        $.ajax({
+          url: '/api/check_guess',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ guess: guess, word: secretWord }),
+          success: function (data) {
+            console.log('Received guess result:', data);
+            guesses.push({ word: guess, result: data.result });
+            updateBoard();
+            updateKeyboard();
+            $('#guess-input').val('');
+          },
+          error: function (jqXHR, textStatus, errorThrown) {
+            console.error('Error submitting guess:', textStatus, errorThrown);
+          },
+        });
+      }
+
+      function updateBoard() {
+        console.log('Updating board');
+        let html = '';
+        for (let i = 0; i < 6; i++) {
+          html += '<div class="grid grid-cols-5 gap-2">';
+          if (i < guesses.length) {
+            let guess = guesses[i];
+            for (let j = 0; j < 5; j++) {
+              let bgColor =
+                guess.result[j] === 'green'
+                  ? 'bg-green-500'
+                  : guess.result[j] === 'yellow'
+                  ? 'bg-yellow-500'
+                  : 'bg-gray-500';
+              html += `<div class="w-14 h-14 ${bgColor} flex items-center justify-center text-white text-2xl font-bold rounded">${guess.word[j]}</div>`;
+            }
+          } else {
+            for (let j = 0; j < 5; j++) {
+              html +=
+                '<div class="w-14 h-14 border-2 border-gray-300 rounded"></div>';
+            }
+          }
+          html += '</div>';
+        }
+        $('#game-board').html(html);
+      }
+
+      function updateKeyboard() {
+        console.log('Updating keyboard');
+        let html = '';
+        keyboard.forEach((row) => {
+          html += '<div class="flex space-x-1 justify-center my-1">';
+          row.forEach((key) => {
+            let bgColor = 'bg-gray-300';
+            guesses.forEach((guess) => {
+              if (guess.word.includes(key)) {
+                let index = guess.word.indexOf(key);
+                if (guess.result[index] === 'green') {
+                  bgColor = 'bg-green-500 text-white';
+                } else if (
+                  guess.result[index] === 'yellow' &&
+                  bgColor !== 'bg-green-500 text-white'
+                ) {
+                  bgColor = 'bg-yellow-500 text-white';
+                } else if (bgColor === 'bg-gray-300') {
+                  bgColor = 'bg-gray-500 text-white';
+                }
+              }
+            });
+            html += `<button class="w-10 h-12 ${bgColor} rounded font-bold">${key}</button>`;
+          });
+          html += '</div>';
+        });
+        console.log('Generated keyboard HTML:', html);
+        $('#keyboard').html(html);
+      }
+      $(document).ready(function () {
+        console.log('Document ready, calling newGame');
+        newGame();
+        $('#submit-guess').click(submitGuess);
+        $('#guess-input').on('keyup', function (e) {
+          if (e.key === 'Enter') {
+            submitGuess();
+          }
+        });
+        console.log('Manually calling updateKeyboard');
+        updateKeyboard();
+      });
     </script>
-</body>
+  </body>
 </html>
