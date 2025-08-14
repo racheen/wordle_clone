@@ -21,6 +21,7 @@
     <h1 class="text-4xl font-bold mb-8 text-gray-800 bg-yellow-200">Wordle</h1>
 
     <div id="game-board" class="grid grid-rows-6 gap-2 mb-8"></div>
+    <div id="feedback" class="text-red-500 mb-4"></div>
     <div class="flex space-x-2">
       <input
         type="text"
@@ -35,17 +36,16 @@
         Submit
       </button>
     </div>
-    <div id="keyboard" class="mt-8">
-      <p>Keyboard should appear here</p>
-    </div>
+    <div id="keyboard" class="mt-8"></div>
 
     <script>
       let secretWord;
       let guesses = [];
+      let gameOver = false;
       const keyboard = [
         ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
         ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-        ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
+        ['Z', 'X', 'C', 'V', 'B', 'N', 'M', '⌫'],
       ];
 
       if (typeof jQuery == 'undefined') {
@@ -60,16 +60,29 @@
           console.log('Received new game data:', data);
           secretWord = data.word;
           guesses = [];
+          gameOver = false;
           updateBoard();
           updateKeyboard();
+          $('#feedback').text('');
+          $('#guess-input').val('').prop('disabled', false);
+          $('#submit-guess')
+            .text('Submit')
+            .prop('disabled', false)
+            .off('click')
+            .on('click', submitGuess);
         }).fail(function (jqXHR, textStatus, errorThrown) {
           console.error('Error starting new game:', textStatus, errorThrown);
+          $('#feedback').text('Error starting new game. Please try again.');
         });
       }
 
       function submitGuess() {
+        if (gameOver) return;
         let guess = $('#guess-input').val().toUpperCase();
-        if (guess.length !== 5) return;
+        if (guess.length !== 5) {
+          $('#feedback').text('Guess must be 5 letters long.');
+          return;
+        }
         console.log('Submitting guess:', guess);
         $.ajax({
           url: '/api/check_guess',
@@ -78,15 +91,51 @@
           data: JSON.stringify({ guess: guess, word: secretWord }),
           success: function (data) {
             console.log('Received guess result:', data);
-            guesses.push({ word: guess, result: data.result });
-            updateBoard();
-            updateKeyboard();
-            $('#guess-input').val('');
+            if (data.error) {
+              $('#feedback').text(data.error);
+            } else {
+              $('#feedback').text('');
+              guesses.push({ word: guess, result: data.result });
+              updateBoard();
+              updateKeyboard();
+              $('#guess-input').val('');
+              checkGameOver(guess);
+            }
           },
           error: function (jqXHR, textStatus, errorThrown) {
             console.error('Error submitting guess:', textStatus, errorThrown);
+            if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+              $('#feedback').text(jqXHR.responseJSON.error);
+            } else {
+              $('#feedback').text('Error submitting guess. Please try again.');
+            }
           },
         });
+      }
+      function checkGameOver(guess) {
+        if (guess === secretWord) {
+          gameOver = true;
+          $('#feedback').text('Congratulations! You guessed the word!');
+          showRestartButton();
+        } else if (guesses.length >= 6) {
+          gameOver = true;
+          $('#feedback').text(`Game over! The word was ${secretWord}.`);
+          showRestartButton();
+        }
+        if (gameOver) {
+          $('#guess-input').prop('disabled', true);
+          $('#submit-guess').prop('disabled', false);
+        }
+      }
+
+      function showRestartButton() {
+        $('#submit-guess')
+          .text('Restart')
+          .off('click')
+          .on('click', function (e) {
+            e.preventDefault();
+            newGame();
+          });
       }
 
       function updateBoard() {
@@ -138,19 +187,56 @@
                 }
               }
             });
-            html += `<button class="w-10 h-12 ${bgColor} rounded font-bold">${key}</button>`;
+            html += `<button class="keyboard-key w-10 h-12 ${bgColor} rounded font-bold" data-key="${key}">${key}</button>`;
           });
           html += '</div>';
         });
         console.log('Generated keyboard HTML:', html);
         $('#keyboard').html(html);
+
+        // Add click event listeners to keyboard buttons
+        $('.keyboard-key').click(function () {
+          const key = $(this).data('key');
+          if (key === '⌫') {
+            const input = $('#guess-input');
+            input.val(input.val().slice(0, -1));
+          } else {
+            addLetterToInput(key);
+          }
+        });
       }
+
+      function addLetterToInput(letter) {
+        const input = $('#guess-input');
+        if (input.val().length < 5) {
+          input.val(input.val() + letter);
+        }
+      }
+
       $(document).ready(function () {
         console.log('Document ready, calling newGame');
         newGame();
         $('#submit-guess').click(submitGuess);
-        $('#guess-input').on('keyup', function (e) {
-          if (e.key === 'Enter') {
+
+        // Add keyboard functionality
+        $(document).on('keydown', function (e) {
+          if (gameOver) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              newGame();
+            }
+            return;
+          }
+          const key = e.key.toUpperCase();
+          if (/^[A-Z]$/.test(key)) {
+            e.preventDefault(); // Prevent default to avoid double input
+            addLetterToInput(key);
+          } else if (key === 'BACKSPACE') {
+            e.preventDefault(); // Prevent default to avoid double backspace
+            const input = $('#guess-input');
+            input.val(input.val().slice(0, -1));
+          } else if (key === 'ENTER') {
+            e.preventDefault(); // Prevent default to avoid form submission
             submitGuess();
           }
         });
