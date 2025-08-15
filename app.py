@@ -5,7 +5,7 @@ import random
 app = Flask(__name__)
 
 # Load words (you might want to move this to a separate file)
-def load_words(filename='words_alpha.txt'):
+def load_words(filename='wordle-answers-alphabetical.txt'):
     try:
         with open(filename, 'r') as file:
             return [word.strip().upper() for word in file if len(word.strip()) == 5]
